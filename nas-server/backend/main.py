@@ -2,9 +2,17 @@ from fastapi import FastAPI, UploadFile, File
 import os
 import shutil
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI(title="NAS Server3", description="A simple NAS server built with FastAPI", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 STORAGE_PATH = "backend/storage"
 os.makedirs(STORAGE_PATH, exist_ok=True)
 
@@ -53,7 +61,7 @@ def delete_file(filename: str):
         "message": f"{filename} deleted"
     }
 
-    
+
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
