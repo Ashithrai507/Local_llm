@@ -1,8 +1,5 @@
-The porpuse of this project is to build a locally running LLM model. But unlike traditional way here we are using two computational devices.
-1. **The Host**: Runs the LLM engine, loads the model into its VRAM/RAM, and exposes an API endpoint (usually HTTP).
-2. **The Client**: Runs a user interface (UI) or a coding extension that connects to the host's IP address.
-
-But here instead of using pre built tools like Ollama or LMstudio we are going build somthing from root using llama-cpp
+I was just worried about my codeing agents credit then i remember why not to run a LLM model completly locally. But running in one single device is not recommended, so why not build a dedicated server, so anyways build a server that runs a llm the why not build a complete server that will act as NAS or media streemer or LLM server whatever...
+So first lets build a NAS from scatch. somthing like openmediavault where you can store upload and delete your data
 
 But the first thing to do is build a NAS from scratch
 I decided to build a complate NAS system that can 
