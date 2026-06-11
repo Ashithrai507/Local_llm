@@ -9,37 +9,69 @@ __pycache__/
 .ruff_cache/
 .coverage
 coverage.xml
+dist/
+build/
+*.egg-info/
 
 # Virtual environments
 venv/
 .venv/
 env/
+ENV/
 
 # Environment and secret files
 .env
+.env.local
+.env.*.local
 .env.*
 *.key
 *.pem
+*.secret
 
 # Logs and local databases
 *.log
+logs/
 *.sqlite3
 *.db
+*.sqlite
 
 # Backend runtime storage and generated files
 nas-server/backend/__pycache__/
 nas-server/backend/storage/
+nas-server/backend/dist/
+nas-server/backend/build/
 nas-server/data/
 
 # Frontend dependencies and build output
 nas-server/frontend/node_modules/
 nas-server/frontend/dist/
+nas-server/frontend/dist-ssr/
 nas-server/frontend/build/
 nas-server/frontend/.next/
 nas-server/frontend/.vite/
+nas-server/frontend/.cache/
+nas-server/frontend/*.local
 
-# OS and editor files
-.DS_Store
-Thumbs.db
+# Package managers
+pnpm-lock.yaml
+yarn.lock
+package-lock.json.bak
+
+# IDE and editor files
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+
+# OS files
+.Trash-*
+.AppleDouble
+.LSOverride
