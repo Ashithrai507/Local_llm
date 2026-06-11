@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment and secret files
+.env
+.env.*
+*.key
+*.pem
+
+# Logs and local databases
+*.log
+*.sqlite3
+*.db
+
+# Backend runtime storage and generated files
+nas-server/backend/__pycache__/
+nas-server/backend/storage/
+nas-server/data/
+
+# Frontend dependencies and build output
+nas-server/frontend/node_modules/
+nas-server/frontend/dist/
+nas-server/frontend/build/
+nas-server/frontend/.next/
+nas-server/frontend/.vite/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
