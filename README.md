@@ -41,4 +41,5 @@ DELETE /folder/{name}
 - 2:Navigation
 - 3:File Metadata
 - 4:Search
-- 5:File Sharing
+- 5:Auth
+- 6:File Sharing

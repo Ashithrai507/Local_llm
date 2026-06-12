@@ -75,3 +75,9 @@ Thumbs.db
 .Trash-*
 .AppleDouble
 .LSOverride
+
+#data
+users.json
+
+#auth
+auth.py
