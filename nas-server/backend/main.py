@@ -5,13 +5,27 @@ import shutil
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from backend.auth import hash_password
+from backend.auth import (
+    hash_password,
+    verify_password
+)
+from backend.jwt_handler import (
+    create_access_token,
+    verify_token
+)
+from fastapi import Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import JWTError
+from backend.jwt_handler import verify_token
 
 
 class FolderCreate(BaseModel):
     name: str
     path: str = ""  # relative path of the PARENT folder ("" = storage root)
 class RegisterRequest(BaseModel):
+    username: str
+    password: str
+class LoginRequest(BaseModel):
     username: str
     password: str
 
@@ -28,6 +42,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+security = HTTPBearer()
 
 # Use an absolute path based on this file's location, so storage always
 # lands in the same place regardless of where uvicorn is launched from.
@@ -74,6 +89,31 @@ def list_dir(rel_path: str):
         "folders": sorted(folders),
         "files": sorted(files),
     }
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+
+    token = credentials.credentials
+
+    try:
+        payload = verify_token(token)
+
+        username = payload.get("username")
+
+        if not username:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token"
+            )
+
+        return username
+
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token"
+        )
 
 
 @app.get("/")
@@ -158,13 +198,25 @@ def delete_item(path: str):
 
     raise HTTPException(status_code=404, detail="Not found")
 
+
+
+@app.get("/me")
+def me(
+    current_user: str = Depends(get_current_user)
+):
+    return {
+        "username": current_user
+    }
+
 @app.post("/register")
 def register(data: RegisterRequest):
 
-    with open(
-        os.path.join(BASE_DIR, "users.json"),
-        "r"
-    ) as f:
+    users_file = os.path.join(
+        BASE_DIR,
+        "users.json"
+    )
+
+    with open(users_file, "r") as f:
         users = json.load(f)
 
     if data.username in users:
@@ -182,10 +234,7 @@ def register(data: RegisterRequest):
         "role": "user"
     }
 
-    with open(
-        os.path.join(BASE_DIR, "users.json"),
-        "w"
-    ) as f:
+    with open(users_file, "w") as f:
         json.dump(
             users,
             f,
@@ -204,5 +253,43 @@ def register(data: RegisterRequest):
 
     return {
         "message": "User created",
+        "username": data.username
+    }
+
+@app.post("/login")
+def login(data: LoginRequest):
+
+    users_file = os.path.join(
+        BASE_DIR,
+        "users.json"
+    )
+
+    with open(users_file, "r") as f:
+        users = json.load(f)
+
+    user = users.get(data.username)
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password"
+        )
+
+    if not verify_password(
+        data.password,
+        user["password_hash"]
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password"
+        )
+
+    token = create_access_token({
+    "username": data.username
+    })
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
         "username": data.username
     }
