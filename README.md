@@ -1,3 +1,6 @@
+README under-const
+!do not trespass
+
 I was just worried about my coding agents credit then i remember why not to run a LLM model completly locally. But running in one single device is not recommended, so why not build a dedicated server, so anyways building a server that runs a llm then why not build a complete server that will act as NAS or media streemer or LLM server whatever...
 So first lets build a NAS from scatch. somthing like openmediavault where you can store upload and delete your data
 
