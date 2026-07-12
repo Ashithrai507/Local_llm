@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+import API_URL, { apiFetch } from "../api/api";
 
 function joinPath(base, name) {
   return base ? `${base}/${name}` : name;
@@ -97,7 +97,7 @@ const css = `
   .section-label { font-size: 10px; font-weight: 600; color: ${C.muted}; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 0 8px; }
 `;
 
-export default function App() {
+export default function Explorer() {
   const [folders, setFolders] = useState([]);
   const [files, setFiles] = useState([]);
   const [currentPath, setCurrentPath] = useState("");
@@ -123,29 +123,41 @@ export default function App() {
   }, []);
 
   async function loadFolder(path, push = true) {
-    setLoading(true);
-    setSelected(null);
-    setSearch("");
-    try {
-      const url = path ? `${API_URL}/folder/${path}` : `${API_URL}/explorer`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error((await res.json()).detail || "Error");
-      const data = await res.json();
-      setFolders(data.folders);
-      setFiles(data.files);
-      setCurrentPath(path);
-      if (push) {
-        setHistory(prev => {
-          const next = [...prev.slice(0, histIdx + 1), path];
-          setHistIdx(next.length - 1);
-          return next;
-        });
-      }
-    } catch (e) {
-      showToast("⚠ " + e.message);
+  setLoading(true);
+  setSelected(null);
+  setSearch("");
+
+  try {
+
+    const endpoint = path
+      ? `/folder/${path}`
+      : "/explorer";
+
+    const res = await apiFetch(endpoint);
+
+    if (!res.ok)
+      throw new Error((await res.json()).detail || "Error");
+
+    const data = await res.json();
+
+    setFolders(data.folders);
+    setFiles(data.files);
+    setCurrentPath(path);
+
+    if (push) {
+      setHistory(prev => {
+        const next = [...prev.slice(0, histIdx + 1), path];
+        setHistIdx(next.length - 1);
+        return next;
+      });
     }
-    setLoading(false);
+
+  } catch (e) {
+    showToast("⚠ " + e.message);
   }
+
+  setLoading(false);
+}
 
   function goHistory(delta) {
     const idx = histIdx + delta;
@@ -155,40 +167,127 @@ export default function App() {
   }
 
   async function createFolder(name) {
-    if (!name.trim()) return;
-    try {
-      const res = await fetch(`${API_URL}/folder`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), path: currentPath }),
-      });
-      if (!res.ok) throw new Error((await res.json()).detail || "Error");
-      showToast(`Folder "${name.trim()}" created`);
-      loadFolder(currentPath, false);
-    } catch (e) { showToast("⚠ " + e.message); }
+
+  if (!name.trim()) return;
+
+  try {
+
+    const res = await apiFetch("/folder", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: name.trim(),
+        path: currentPath,
+      }),
+    });
+
+    if (!res.ok)
+      throw new Error((await res.json()).detail || "Error");
+
+    showToast(`Folder "${name.trim()}" created`);
+    
+    loadFolder(currentPath, false);
+
+  } catch (e) {
+    showToast("⚠ " + e.message);
+  }
+}
+
+async function deleteItem(name, isFolder) {
+
+  try {
+
+    const res = await apiFetch(
+      `/delete/${joinPath(currentPath, name)}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!res.ok)
+      throw new Error((await res.json()).detail || "Error");
+
+    showToast(`"${name}" deleted`);
+
+    setSelected(null);
+
+    loadFolder(currentPath, false);
+
+  } catch (e) {
+
+    showToast("⚠ " + e.message);
+
   }
 
-  async function deleteItem(name, isFolder) {
-    try {
-      const res = await fetch(`${API_URL}/delete/${joinPath(currentPath, name)}`, { method: "DELETE" });
-      if (!res.ok) throw new Error((await res.json()).detail || "Error");
-      showToast(`"${name}" deleted`);
-      setSelected(null);
-      loadFolder(currentPath, false);
-    } catch (e) { showToast("⚠ " + e.message); }
-  }
+}
 
-  async function uploadFiles(fileList) {
-    let failed = 0;
-    await Promise.all(Array.from(fileList).map(async (file) => {
+async function downloadFile(path) {
+  try {
+    const res = await apiFetch(`/download/${path}`);
+
+    if (!res.ok) {
+      showToast("Download failed");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = path.split("/").pop();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (e) {
+    showToast("⚠ " + e.message);
+  }
+}
+
+async function uploadFiles(fileList) {
+
+  let failed = 0;
+
+  await Promise.all(
+
+    Array.from(fileList).map(async (file) => {
+
       const fd = new FormData();
+
       fd.append("file", file);
       fd.append("path", currentPath);
-      const res = await fetch(`${API_URL}/upload`, { method: "POST", body: fd });
-      if (!res.ok) failed++;
-    }));
-    showToast(failed ? `⚠ ${failed} upload(s) failed` : `${fileList.length === 1 ? `"${fileList[0].name}"` : fileList.length + " files"} uploaded`);
-    loadFolder(currentPath, false);
+
+      const res = await apiFetch(
+        "/upload",
+        {
+          method: "POST",
+          body: fd,
+        }
+      );
+
+      if (!res.ok)
+        failed++;
+
+    })
+
+  );
+
+  showToast(
+    failed
+      ? `⚠ ${failed} upload(s) failed`
+      : `${fileList.length === 1 ? `"${fileList[0].name}"` : fileList.length + " files"} uploaded`
+  );
+
+  loadFolder(currentPath, false);
+
+}
+
+  function logout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("username");
+    window.location.reload();
   }
 
   useEffect(() => { loadFolder(""); }, []);
@@ -262,7 +361,7 @@ export default function App() {
                 <div className="sidebar-label" style={{ marginTop: "8px" }}>Selected</div>
                 <div style={{ padding: "4px 12px 8px", color: C.muted, fontSize: "11px", wordBreak: "break-all", lineHeight: 1.4 }}>{selected}</div>
                 {selectedType === "file" && (
-                  <div className="sidebar-item" onClick={() => window.open(`${API_URL}/download/${joinPath(currentPath, selected)}`, "_blank")}>
+                  <div className="sidebar-item" onClick={() => downloadFile(joinPath(currentPath, selected))}>
                     <span>⬇</span> Download
                   </div>
                 )}
@@ -280,6 +379,20 @@ export default function App() {
             )}
 
             <div style={{ flex: 1 }} />
+
+            <div
+              className="sidebar-item"
+              style={{ color: "#ff453a" }}
+              onClick={() => {
+                if (window.confirm("Logout?")) {
+                  logout();
+                }
+              }}
+            >
+              <span>🚪</span>
+              Logout
+            </div>
+
             <div style={{ padding: "12px", fontSize: "11px", color: C.muted, borderTop: `1px solid ${C.border}` }}>
               {loading ? "Loading…" : `${folders.length} folder${folders.length !== 1 ? "s" : ""}, ${files.length} file${files.length !== 1 ? "s" : ""}`}
             </div>
@@ -407,7 +520,7 @@ export default function App() {
             </div>
           )}
           {ctx.type === "file" && (
-            <div className="ctx-item" onClick={() => { window.open(`${API_URL}/download/${joinPath(currentPath, ctx.name)}`, "_blank"); setCtx(null); }}>
+            <div className="ctx-item" onClick={() => { downloadFile(joinPath(currentPath, ctx.name)); setCtx(null); }}>
               ⬇ Download
             </div>
           )}

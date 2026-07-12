@@ -77,7 +77,13 @@ Thumbs.db
 .LSOverride
 
 #data
-users.json
+nas-server/backend/users.json
 
-#auth
-auth.py
+# Backend virtual environments
+nas-server/backend/.venv/
+nas-server/backend/venv/
+
+# Cache directories (recursive)
+**/__pycache__/
+
+# Note: `auth.py` is tracked in the backend and should not be ignored globally

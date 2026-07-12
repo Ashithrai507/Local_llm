@@ -54,31 +54,66 @@ os.makedirs(STORAGE_PATH, exist_ok=True)
 os.makedirs(USERS_STORAGE, exist_ok=True)
 
 
-def safe_path(relative_path: str) -> str:
-    """
-    Convert a relative path coming from the client into a safe absolute
-    path inside STORAGE_PATH. Raises 400 if the resulting path would
-    escape STORAGE_PATH (e.g. via '..' segments).
-    """
-    relative_path = (relative_path or "").strip("/")
-    full_path = os.path.normpath(os.path.join(STORAGE_PATH, relative_path))
+def safe_path(
+    username: str,
+    relative_path: str
+):
 
-    if not (full_path == STORAGE_PATH or full_path.startswith(STORAGE_PATH + os.sep)):
-        raise HTTPException(status_code=400, detail="Invalid path")
+    user_root = get_user_storage(
+        username
+    )
+
+    relative_path = (
+        relative_path or ""
+    ).strip("/")
+
+    full_path = os.path.normpath(
+        os.path.join(
+            user_root,
+            relative_path
+        )
+    )
+
+    if not (
+        full_path == user_root
+        or full_path.startswith(
+            user_root + os.sep
+        )
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid path"
+        )
 
     return full_path
 
 
-def list_dir(rel_path: str):
-    full = safe_path(rel_path)
+def list_dir(
+    username: str,
+    rel_path: str
+):
+
+    full = safe_path(
+        username,
+        rel_path
+    )
 
     if not os.path.isdir(full):
-        raise HTTPException(status_code=404, detail="Folder not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Folder not found"
+        )
 
-    folders, files = [], []
+    folders = []
+    files = []
 
     for item in os.listdir(full):
-        item_path = os.path.join(full, item)
+
+        item_path = os.path.join(
+            full,
+            item
+        )
+
         if os.path.isdir(item_path):
             folders.append(item)
         else:
@@ -96,24 +131,59 @@ def get_current_user(
 
     token = credentials.credentials
 
+    print("\n" + "=" * 50)
+    print("TOKEN RECEIVED:")
+    print(token)
+    print("=" * 50)
+
     try:
         payload = verify_token(token)
+
+        print("JWT VERIFIED SUCCESSFULLY")
+        print("PAYLOAD:")
+        print(payload)
 
         username = payload.get("username")
 
         if not username:
+            print("ERROR: Username missing from token")
             raise HTTPException(
                 status_code=401,
                 detail="Invalid token"
             )
 
+        print("CURRENT USER:", username)
+
         return username
 
-    except JWTError:
+    except Exception as e:
+
+        print("\nJWT ERROR")
+        print("ERROR TYPE:", type(e))
+        print("ERROR:", str(e))
+        print("=" * 50)
+
         raise HTTPException(
             status_code=401,
             detail="Invalid token"
         )
+
+def get_user_storage(username: str):
+
+    user_root = os.path.join(
+        USERS_STORAGE,
+        username
+    )
+
+    os.makedirs(
+        user_root,
+        exist_ok=True
+    )
+
+    return user_root
+
+
+
 
 
 @app.get("/")
@@ -122,71 +192,150 @@ def root():
 
 
 @app.get("/explorer")
-def explorer():
-    """List the contents of the storage root."""
-    return list_dir("")
-
+def explorer(
+    current_user: str = Depends(
+        get_current_user
+    )
+):
+    return list_dir(
+        current_user,
+        ""
+    )
 
 @app.get("/folder/{path:path}")
-def get_folder(path: str):
-    """List the contents of any folder, at any nesting depth."""
-    return list_dir(path)
+def get_folder(
+    path: str,
+    current_user: str = Depends(
+        get_current_user
+    )
+):
+    return list_dir(
+        current_user,
+        path
+    )
 
 
 @app.post("/folder")
-def create_folder(folder: FolderCreate):
-    parent = safe_path(folder.path)
+def create_folder(
+    folder: FolderCreate,
+    current_user: str = Depends(get_current_user)
+):
+
+    parent = safe_path(
+        current_user,
+        folder.path
+    )
 
     if not os.path.isdir(parent):
-        raise HTTPException(status_code=404, detail="Parent folder not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Parent folder not found"
+        )
 
-    if not folder.name or "/" in folder.name or "\\" in folder.name:
-        raise HTTPException(status_code=400, detail="Invalid folder name")
+    if (
+        not folder.name
+        or "/" in folder.name
+        or "\\" in folder.name
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid folder name"
+        )
 
-    new_folder = os.path.join(parent, folder.name)
+    new_folder = os.path.join(
+        parent,
+        folder.name
+    )
 
     if os.path.exists(new_folder):
-        raise HTTPException(status_code=400, detail="Folder already exists")
+        raise HTTPException(
+            status_code=400,
+            detail="Folder already exists"
+        )
 
     os.makedirs(new_folder)
 
-    return {"message": f"Folder '{folder.name}' created"}
+    return {
+        "message": "Folder created",
+        "owner": current_user
+    }
 
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...), path: str = Form("")):
-    """Upload a file into the given folder path ("" = storage root)."""
-    folder = safe_path(path)
+async def upload_file(
+    file: UploadFile = File(...),
+    path: str = Form(""),
+    current_user: str = Depends(get_current_user)
+):
+
+    folder = safe_path(
+        current_user,
+        path
+    )
 
     if not os.path.isdir(folder):
-        raise HTTPException(status_code=404, detail="Folder not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Folder not found"
+        )
 
-    file_path = os.path.join(folder, file.filename)
+    file_path = os.path.join(
+        folder,
+        file.filename
+    )
 
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        shutil.copyfileobj(
+            file.file,
+            buffer
+        )
 
-    return {"message": "File uploaded", "filename": file.filename}
+    return {
+        "message": "File uploaded",
+        "filename": file.filename,
+        "owner": current_user
+    }
 
 
 @app.get("/download/{path:path}")
-def download_file(path: str):
-    """Download a file at any nesting depth."""
-    full = safe_path(path)
+def download_file(
+    path: str,
+    current_user: str = Depends(get_current_user)
+):
+
+    full = safe_path(
+        current_user,
+        path
+    )
 
     if not os.path.isfile(full):
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(
+            status_code=404,
+            detail="File not found"
+        )
 
-    return FileResponse(path=full, filename=os.path.basename(full))
+    return FileResponse(
+        path=full,
+        filename=os.path.basename(full)
+    )
 
 
 @app.delete("/delete/{path:path}")
-def delete_item(path: str):
-    """Delete a file, or recursively delete a folder, at any nesting depth."""
-    full = safe_path(path)
+def delete_item(
+    path: str,
+    current_user: str = Depends(get_current_user)
+):
 
-    if full == STORAGE_PATH:
-        raise HTTPException(status_code=400, detail="Cannot delete the storage root")
+    full = safe_path(
+        current_user,
+        path
+    )
+
+    if full == get_user_storage(current_user):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete home directory"
+        )
 
     if os.path.isdir(full):
         shutil.rmtree(full)
@@ -196,7 +345,10 @@ def delete_item(path: str):
         os.remove(full)
         return {"message": "File deleted"}
 
-    raise HTTPException(status_code=404, detail="Not found")
+    raise HTTPException(
+        status_code=404,
+        detail="Not found"
+    )
 
 
 

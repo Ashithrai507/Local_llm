@@ -3,26 +3,19 @@ from datetime import datetime, timedelta
 
 SECRET_KEY = "change_this_later_to_a_long_random_secret"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-
 
 def create_access_token(data: dict):
     to_encode = data.copy()
 
-    expire = datetime.utcnow() + timedelta(
-        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    expire = datetime.utcnow() + timedelta(hours=1)
 
-    to_encode.update({
-        "exp": expire
-    })
+    to_encode["exp"] = expire
 
     return jwt.encode(
         to_encode,
         SECRET_KEY,
         algorithm=ALGORITHM
     )
-
 
 def verify_token(token: str):
     return jwt.decode(
