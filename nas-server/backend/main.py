@@ -17,6 +17,7 @@ from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError
 from backend.jwt_handler import verify_token
+from backend.routes.movies import router as movies_router
 
 
 class FolderCreate(BaseModel):
@@ -43,6 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 security = HTTPBearer()
+app.include_router(movies_router)
 
 # Use an absolute path based on this file's location, so storage always
 # lands in the same place regardless of where uvicorn is launched from.
