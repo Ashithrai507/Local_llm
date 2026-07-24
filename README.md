@@ -43,6 +43,14 @@ POST /folder
 GET  /folders
 GET  /folder/{name}
 DELETE /folder/{name}
+
+Cloud Storage (upload, download, folder management)
+Movie Streaming with metadata and video playback
+JWT Authentication
+Global access using Cloudflare Tunnel
+FastAPI API documentation via Swagger
+React + Vite frontend
+FastAPI backend
 ```
 
 - 2:Navigation
