@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 
-import API_URL, { apiFetch } from "../api/api";
+import { apiFetch } from "../api/api";
 
 function joinPath(base, name) {
   return base ? `${base}/${name}` : name;
@@ -195,7 +195,7 @@ export default function Explorer() {
   }
 }
 
-async function deleteItem(name, isFolder) {
+async function deleteItem(name) {
 
   try {
 
@@ -290,7 +290,7 @@ async function uploadFiles(fileList) {
     window.location.reload();
   }
 
-  useEffect(() => { loadFolder(""); }, []);
+  useEffect(() => { loadFolder(""); }, [loadFolder]);
   useEffect(() => {
     const close = () => setCtx(null);
     window.addEventListener("click", close);
