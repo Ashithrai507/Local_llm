@@ -136,7 +136,7 @@ const sections = [
 
 const allItems = sections.flatMap(s => s.items);
 
-function ServiceCard({ title, description, icon, route, tag, onClick }) {
+function ServiceCard({ title, description, icon, tag, onClick }) {
   return (
     <div className="service-card" onClick={onClick}>
       <div className="service-card-icon">{icon}</div>
